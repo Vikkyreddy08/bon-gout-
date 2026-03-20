@@ -20,9 +20,9 @@ export const getImageUrl = (url) => {
     return url;
   }
   
-  // If it looks like an Unsplash photo ID (e.g., "photo-123..."), prepend the domain.
+  // If it looks like an Unsplash photo ID (e.g., "photo-123..."), prepend the domain and add parameters.
   if (url.startsWith('photo-')) {
-    return `https://images.unsplash.com/${url}`;
+    return `https://images.unsplash.com/${url}?auto=format&fit=crop&w=800&q=80`;
   }
   
   // Default fallback if we can't determine the format.
