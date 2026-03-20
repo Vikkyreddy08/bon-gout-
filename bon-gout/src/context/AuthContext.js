@@ -113,10 +113,20 @@ export function AuthProvider({ children }) {
       toast.success(`Welcome back, ${displayName}!`);
       return profile;
     } catch (err) {
-      // LOGIC: Extract the most readable error message.
+      // LOGIC: Extract the standardized error message from our backend Response.
       const errorData = err.response?.data;
-      const msg = errorData?.access_code || errorData?.detail || errorData?.message || "Invalid credentials";
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+      let errorMsg = "Login failed";
+
+      if (errorData?.message) {
+        errorMsg = errorData.message;
+      } else if (errorData) {
+        const fieldErrors = Object.entries(errorData)
+          .map(([key, value]) => `${key}: ${Array.isArray(value) ? value[0] : value}`)
+          .join(" | ");
+        errorMsg = fieldErrors || errorMsg;
+      }
+      
+      toast.error(errorMsg);
       throw err;
     }
   };
@@ -130,12 +140,15 @@ export function AuthProvider({ children }) {
       await api.post("users/register/", userData);
       toast.success("Account created! Please login.");
     } catch (err) {
-      // LOGIC: Extract errors for specific fields (username, access_code, etc.)
+      // LOGIC: Extract the standardized error message from our backend Response.
       const errorData = err.response?.data;
       let errorMsg = "Registration failed";
-      
-      if (errorData) {
-        // If it's a validation error object, join the messages.
+
+      if (errorData?.message) {
+        // If our backend sent a standardized "message" field, use it directly.
+        errorMsg = errorData.message;
+      } else if (errorData) {
+        // Fallback: If it's a raw validation object, join the messages.
         const fieldErrors = Object.entries(errorData)
           .map(([key, value]) => `${key}: ${Array.isArray(value) ? value[0] : value}`)
           .join(" | ");

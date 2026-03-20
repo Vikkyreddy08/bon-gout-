@@ -46,7 +46,12 @@ else:
 # ==========================================
 # ALLOWED HOSTS
 # ==========================================
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'foodordering-n21r.onrender.com']
+ALLOWED_HOSTS = [
+    'localhost', 
+    '127.0.0.1', 
+    'foodordering-n21r.onrender.com',
+    '.onrender.com'
+]
 
 # Add environment-specific hosts
 env_hosts_raw = os.getenv('ALLOWED_HOSTS')
