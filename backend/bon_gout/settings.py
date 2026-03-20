@@ -67,6 +67,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://foodordering-n21r.onrender.com',
     'https://bon-gout-food-ordering-platform.vercel.app',
     'https://bon-gout-food-ordering-platform-rolvk1sac.vercel.app',
+    'https://bon-gout-food-ordering-platform-git-main-vikkyreddy08s-projects.vercel.app',
 ]
 if DEBUG:
     CSRF_TRUSTED_ORIGINS += [
@@ -225,6 +226,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://foodordering-n21r.onrender.com",
     "https://bon-gout-food-ordering-platform.vercel.app",
     "https://bon-gout-food-ordering-platform-rolvk1sac.vercel.app",
+    "https://bon-gout-food-ordering-platform-git-main-vikkyreddy08s-projects.vercel.app",
 ]
 
 if DEBUG:

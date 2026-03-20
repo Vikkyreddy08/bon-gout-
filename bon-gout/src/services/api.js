@@ -10,9 +10,28 @@
 import axios from 'axios';
 
 // Create a pre-configured instance of Axios.
-// We use a fallback URL in case the environment variable is not set.
+// We clean the URL to ensure it starts with https:// and ends with /api/
+const getBaseURL = () => {
+  let url = process.env.REACT_APP_API_URL || 'https://foodordering-n21r.onrender.com/api/';
+  
+  // 1. Ensure it starts with http:// or https://
+  if (url && !url.startsWith('http')) {
+    url = `https://${url}`;
+  }
+  
+  // 2. Ensure it ends with /api/
+  if (url && !url.endsWith('/api/')) {
+    if (url.endsWith('/api')) {
+      url = `${url}/`;
+    } else {
+      url = url.endsWith('/') ? `${url}api/` : `${url}/api/`;
+    }
+  }
+  return url;
+};
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://foodordering-n21r.onrender.com/api/'
+  baseURL: getBaseURL()
 });
 
 // The endpoint for getting a new access token using a refresh token.
