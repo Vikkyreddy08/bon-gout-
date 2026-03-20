@@ -46,8 +46,9 @@ const Carousel = () => {
       try {
         const response = await api.get('restaurant/carousel/');
         const apiData = response.data.data || response.data;
-        if (Array.isArray(apiData) && apiData.length > 0) {
-          setSlides(apiData);
+        const data = apiData.results || apiData;
+        if (Array.isArray(data) && data.length > 0) {
+          setSlides(data);
         } else {
           setSlides(DEFAULT_SLIDES);
         }

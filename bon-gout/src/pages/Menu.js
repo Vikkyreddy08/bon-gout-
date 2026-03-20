@@ -220,9 +220,13 @@ export default function Menu() {
           api.get('restaurant/categories/')
         ]);
         
-        // The API response is nested under a 'data' object, which contains 'results'
-        const menuData = menuRes.data?.data?.results;
-        const catData = catRes.data?.data?.results;
+        // INTERVIEW NOTE: We audit the response format to ensure it works 
+        // with both raw arrays and standardized {status, message, data} objects.
+        const menuApiData = menuRes.data?.data || menuRes.data;
+        const catApiData = catRes.data?.data || catRes.data;
+
+        const menuData = menuApiData.results || menuApiData;
+        const catData = catApiData.results || catApiData;
         
         setItems(Array.isArray(menuData) ? menuData : []);
         setCategories(Array.isArray(catData) ? catData : []);
