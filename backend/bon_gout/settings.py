@@ -238,14 +238,15 @@ SIMPLE_JWT = {
 # ==========================================
 # CORS
 # ==========================================
-CORS_ALLOW_ALL_ORIGINS = True # Set to True for deployment debugging to rule out CORS issues
+# Set to False for production safety. We use regex below to allow only your Vercel domains.
+CORS_ALLOW_ALL_ORIGINS = False 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept', 'accept-encoding', 'authorization', 'content-type',
     'dnt', 'origin', 'user-agent', 'x-csrftoken', 'x-requested-with',
 ]
 
-# Even though we allow all origins, we keep these for CSRF safety
+# CSRF security: only trust these specific domains
 CSRF_TRUSTED_ORIGINS = [
     'https://foodordering-n21r.onrender.com',
     'https://bon-gout-food-ordering-platform.vercel.app',
@@ -253,11 +254,21 @@ CSRF_TRUSTED_ORIGINS = [
     'https://bon-gout-food-ordering-platform-git-main-vikkyreddy08s-projects.vercel.app',
 ]
 
-# Allow any subdomain of vercel.app for development flexibility
+# Safely allow any subdomain of vercel.app for your project
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
     r"^https://bon-gout-food-ordering-platform.*\.vercel\.app$",
 ]
+
+# Also explicitly allow localhost for local development
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CSRF_TRUSTED_ORIGINS += [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+    ]
 
 # ==========================================
 # MEDIA
