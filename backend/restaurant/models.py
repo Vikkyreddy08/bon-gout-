@@ -45,6 +45,7 @@ class Category(models.Model):
 
     class Meta:
         verbose_name_plural = "Categories"
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -75,6 +76,9 @@ class MenuItem(models.Model):
     total_reviews = models.PositiveIntegerField(default=0)
     
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', 'name']
 
     def update_rating(self):
         """
