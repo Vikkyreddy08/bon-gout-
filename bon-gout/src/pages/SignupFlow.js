@@ -36,6 +36,8 @@ const SignupFlow = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [role, setRole] = useState('user'); // Default role
+  const [accessCode, setAccessCode] = useState(''); // Secret key for admin/employee
   const [timer, setTimer] = useState(0); // 30s resend timer
 
   // TIMER LOGIC
@@ -148,9 +150,10 @@ const SignupFlow = () => {
       const response = await api.post('users/register/', {
         username,
         phone,
-        otp: fullOtp, // Send OTP again for backend verification during registration
+        otp: fullOtp,
         password,
-        role: 'user',
+        role, // Using dynamic role
+        access_code: accessCode, // Sending secret key
         email: `${username}@bon-gout.local`
       });
       
@@ -289,6 +292,27 @@ const SignupFlow = () => {
         {/* STEP 3: PASSWORD SETUP */}
         {step === 3 && (
           <form onSubmit={handleFinalSignup} className="space-y-5 animate-fade-in-up">
+            {/* ROLE SELECTION */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-widest text-center">I am a...</label>
+              <div className="flex gap-3">
+                {['user', 'employee', 'admin'].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`flex-1 py-3 rounded-xl font-bold capitalize transition-all border ${
+                      role === r 
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20' 
+                        : 'bg-transparent text-gray-500 border-gray-200 dark:border-gray-700 hover:border-orange-500/50'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Username Field */}
             <div className="relative">
               <input
@@ -300,6 +324,21 @@ const SignupFlow = () => {
                 required
               />
             </div>
+
+            {/* SECRET CODE (Show only for Admin/Employee) */}
+            {(role === 'admin' || role === 'employee') && (
+              <div className="relative animate-fade-in-up">
+                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500" />
+                <input
+                  type="password"
+                  placeholder={role === 'admin' ? "Admin Access Code" : "Employee Secret Key"}
+                  className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-orange-500/30 bg-orange-500/5 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value)}
+                  required
+                />
+              </div>
+            )}
 
             {/* Password Field */}
             <div className="relative">
