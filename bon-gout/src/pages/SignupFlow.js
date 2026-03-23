@@ -8,15 +8,22 @@
  * - Step 3: Password Creation with Toggle Visibility
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash, FaPhone, FaLock, FaCheckCircle } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const SignupFlow = () => {
-  const { register } = useAuth();
+  const { register, isLoggedIn } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/');
+    }
+  }, [isLoggedIn, navigate]);
 
   // FLOW STATE: 1 = Phone, 2 = OTP, 3 = Password
   const [step, setStep] = useState(1);
@@ -24,32 +31,42 @@ const SignupFlow = () => {
 
   // FORM DATA STATE
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']); // 6-digit OTP
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [username, setUsername] = useState(''); // Added for final Django registration
+  const [username, setUsername] = useState('');
+  const [timer, setTimer] = useState(0); // 30s resend timer
 
-  // UI VISIBILITY STATE
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // TIMER LOGIC
+  useEffect(() => {
+    let interval;
+    if (timer > 0) {
+      interval = setInterval(() => setTimer((t) => t - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
 
   // ==========================================
   // STEP 1: SEND OTP
   // ==========================================
   const handleSendOTP = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!phone || phone.length < 10) {
       toast.error("Please enter a valid 10-digit phone number.");
       return;
     }
 
     setIsLoading(true);
-    // SIMULATION: Calling a mock SMS API
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success("OTP sent to your phone! (Code: 123456)"); // Mock code
+    try {
+      await api.post('users/send-otp/', { phone });
+      toast.success("OTP sent to your phone!");
+      setTimer(30);
       setStep(2);
-    }, 1500);
+    } catch (err) {
+      // Toast handled by interceptor
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ==========================================
@@ -57,24 +74,55 @@ const SignupFlow = () => {
   // ==========================================
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
-    if (otp !== '123456') { // Mock verification
-      toast.error("Invalid OTP. Please try again.");
+    const fullOtp = otp.join('');
+    if (fullOtp.length < 6) {
+      toast.error("Please enter the 6-digit code.");
       return;
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await api.post('users/verify-otp/', { phone, otp: fullOtp });
       toast.success("Phone verified successfully! ✨");
       setStep(3);
-    }, 1000);
+    } catch (err) {
+      // Toast handled by interceptor
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // OTP INPUT HANDLERS
+  const handleOtpChange = (element, index) => {
+    if (isNaN(element.value)) return false;
+    const newOtp = [...otp];
+    newOtp[index] = element.value;
+    setOtp(newOtp);
+
+    // Auto-focus next
+    if (element.nextSibling && element.value) {
+      element.nextSibling.focus();
+    }
+  };
+
+  const handleBackspace = (e, index) => {
+    if (e.key === "Backspace") {
+      if (!otp[index] && e.target.previousSibling) {
+        e.target.previousSibling.focus();
+      }
+    }
+  };
+
+  // UI VISIBILITY STATE
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // ==========================================
   // STEP 3: FINAL SIGNUP
   // ==========================================
   const handleFinalSignup = async (e) => {
     e.preventDefault();
+    const fullOtp = otp.join('');
 
     // Validations
     if (!username) {
@@ -94,18 +142,27 @@ const SignupFlow = () => {
     setIsLoading(true);
     try {
       // Calling the real registration service from AuthContext
-      await register({
-        username: username,
-        phone: phone,
-        password: password,
+      const response = await api.post('users/register/', {
+        username,
+        phone,
+        otp: fullOtp, // Send OTP again for backend verification during registration
+        password,
         role: 'user',
-        email: `${username}@bon-gout.local` // Fallback email
+        email: `${username}@bon-gout.local`
       });
       
-      toast.success("Registration complete! Redirecting to login...");
-      setTimeout(() => navigate('/login'), 2000);
+      const { access, refresh } = response.data.data;
+      
+      // Auto-login after successful signup
+      localStorage.setItem("access_token", access);
+      localStorage.setItem("refresh_token", refresh);
+      
+      toast.success("Registration successful! Welcome to Bon Goût ✨");
+      
+      // Force page reload or redirect to dashboard
+      window.location.href = '/menu';
     } catch (err) {
-      // Toast already handled in context
+      // Error handled by interceptor
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +207,7 @@ const SignupFlow = () => {
 
         {/* STEP 1: PHONE INPUT */}
         {step === 1 && (
-          <form onSubmit={handleSendOTP} className="space-y-6 animate-fadeIn">
+          <form onSubmit={handleSendOTP} className="space-y-6 animate-fade-in-up">
             <div className="relative">
               <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -174,17 +231,20 @@ const SignupFlow = () => {
 
         {/* STEP 2: OTP INPUT */}
         {step === 2 && (
-          <form onSubmit={handleVerifyOTP} className="space-y-6 animate-fadeIn">
+          <form onSubmit={handleVerifyOTP} className="space-y-6 animate-fade-in-up">
             <div className="flex justify-center gap-2">
-              <input
-                type="text"
-                maxLength="6"
-                placeholder="000000"
-                className="w-48 text-center text-3xl font-black tracking-[0.5em] py-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-transparent dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                required
-              />
+              {otp.map((data, index) => (
+                <input
+                  key={index}
+                  type="text"
+                  maxLength="1"
+                  className="w-10 h-12 text-center text-xl font-bold rounded-xl border border-gray-200 dark:border-gray-600 bg-transparent dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                  value={data}
+                  onChange={(e) => handleOtpChange(e.target, index)}
+                  onKeyDown={(e) => handleBackspace(e, index)}
+                  onFocus={(e) => e.target.select()}
+                />
+              ))}
             </div>
             <div className="flex flex-col gap-4">
               <button
@@ -197,10 +257,13 @@ const SignupFlow = () => {
               <div className="flex justify-between items-center px-2">
                 <button
                   type="button"
+                  disabled={timer > 0 || isLoading}
                   onClick={handleSendOTP}
-                  className="text-sm text-orange-500 hover:text-orange-600 font-bold transition-colors"
+                  className={`text-sm font-bold transition-colors ${
+                    timer > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-orange-500 hover:text-orange-600'
+                  }`}
                 >
-                  Resend OTP
+                  {timer > 0 ? `Resend in ${timer}s` : 'Resend OTP'}
                 </button>
                 <button
                   type="button"
@@ -216,7 +279,7 @@ const SignupFlow = () => {
 
         {/* STEP 3: PASSWORD SETUP */}
         {step === 3 && (
-          <form onSubmit={handleFinalSignup} className="space-y-5 animate-fadeIn">
+          <form onSubmit={handleFinalSignup} className="space-y-5 animate-fade-in-up">
             {/* Username Field */}
             <div className="relative">
               <input

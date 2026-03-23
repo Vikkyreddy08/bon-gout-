@@ -12,79 +12,49 @@ import os
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import OTP
 
 User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """
-    PURPOSE: Handles new user signups.
-    
-    SPECIAL FEATURES:
-    - password: write_only (never sent back to frontend for security).
-    - access_code: used to verify Admin/Employee signup attempts.
-    
-    INPUTS: username, email, password, first_name, role, phone, access_code.
-    OUTPUTS: A User model instance (or validation errors).
-    
-    INTERVIEW NOTE: We implement custom 'validate' and 'create' methods to handle 
-    security logic like access code verification and password hashing.
-    """
-    # password: CharField that only accepts data (write_only). 
-    # We never want to send the hashed password back to the user!
     password = serializers.CharField(write_only=True)
-    
-    # access_code: A temporary field used only for signup verification.
-    # It is not stored in the database.
     access_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
-        # Link this serializer to the User model we defined in models.py
         model = User
-        # These are the fields that can be sent/received via JSON
         fields = ['id', 'username', 'email', 'password', 'first_name', 'role', 'phone', 'access_code']
 
     def validate(self, data):
-        """
-        PURPOSE: Security check for roles.
-        LOGIC: 
-        - If someone tries to sign up as 'admin', they MUST provide the secret code from the .env file.
-        - If someone tries to sign up as 'employee', they MUST provide the employee secret code.
-        - Regular users don't need a code.
+        role = data.get('role', 'user')
+        phone = data.get('phone')
         
-        ANALOGY: Like a "VIP entrance" that requires a special password to get in.
-        
-        INPUT: 'data' is a dictionary of the fields sent from the React frontend.
-        OUTPUT: Returns the validated data dictionary if all checks pass.
-        """
-        role = data.get('role', 'user') # Defaults to 'user' if role is missing
-        access_code = data.get('access_code', '')
-        
-        # Get the request context to check if a logged-in admin is creating this user.
-        # This is useful for the 'Add Employee' page where an admin shouldn't need the secret key.
+        # Admin Creator Bypass
         request = self.context.get('request')
         is_admin_creator = request and request.user and request.user.is_authenticated and (request.user.is_staff or getattr(request.user, 'role', '') == 'admin')
 
-        # Skip code verification if an authorized admin is performing the creation.
         if is_admin_creator:
             return data
 
-        # ROLE-BASED VERIFICATION:
-        if role == 'admin':
-            # Check if the provided code matches the one hidden in our server's .env file
-            admin_code = os.getenv('ADMIN_SECRET_CODE')
-            if not admin_code:
-                # Fallback for production if env var is missing but we are debugging
-                admin_code = "ADMIN123" 
+        # 1. OTP VERIFICATION CHECK (Only for regular users)
+        if role == 'user':
+            if not phone:
+                raise serializers.ValidationError({"phone": "Phone number is required for verification."})
             
+            try:
+                otp_obj = OTP.objects.get(phone=phone)
+                if not otp_obj.is_verified:
+                    raise serializers.ValidationError({"otp": "Phone number not verified via OTP."})
+            except OTP.DoesNotExist:
+                raise serializers.ValidationError({"otp": "No OTP verification found for this phone number."})
+
+        # 2. ROLE-BASED ACCESS CODE VERIFICATION
+        access_code = data.get('access_code', '')
+        if role == 'admin':
+            admin_code = os.getenv('ADMIN_SECRET_CODE', 'ADMIN123')
             if access_code != admin_code:
                 raise serializers.ValidationError({"access_code": "Invalid access code for Admin role."})
-        
         elif role == 'employee':
-            # Check if the provided code matches the employee secret key
-            employee_code = os.getenv('EMPLOYEE_SECRET_CODE')
-            if not employee_code:
-                employee_code = "EMP123"
-
+            employee_code = os.getenv('EMPLOYEE_SECRET_CODE', 'EMP123')
             if access_code != employee_code:
                 raise serializers.ValidationError({"access_code": "Invalid access code for Employee role."})
         

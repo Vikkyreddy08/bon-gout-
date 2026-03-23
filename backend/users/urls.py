@@ -9,11 +9,17 @@ INTERACTIONS:
 
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import MyTokenObtainPairView, UserRegistrationView, UserProfileView, AddEmployeeView, EmployeeListView, EmployeeDeleteView
+from .views import MyTokenObtainPairView, UserRegistrationView, UserProfileView, AddEmployeeView, EmployeeListView, EmployeeDeleteView, SendOTPView, VerifyOTPView
 
 urlpatterns = [
     # API: POST /api/users/register/ -> Public signup
     path('register/', UserRegistrationView.as_view(), name='register'),
+    
+    # API: POST /api/users/send-otp/ -> Sends OTP to phone
+    path('send-otp/', SendOTPView.as_view(), name='send_otp'),
+
+    # API: POST /api/users/verify-otp/ -> Verifies OTP
+    path('verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
     
     # API: POST /api/users/login/ -> JWT login (returns tokens)
     path('login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),

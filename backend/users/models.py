@@ -10,6 +10,9 @@ INTERACTIONS:
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
+import datetime
+import hashlib
 
 # ==========================================
 # CUSTOM USER MODEL - ✅ ADDED ROLE SUPPORT
@@ -17,23 +20,13 @@ from django.contrib.auth.models import AbstractUser
 class User(AbstractUser):
     """
     PURPOSE: Extends the default Django User to support specific roles needed for a restaurant app.
-    
-    REAL-WORLD MEANING: 
-    - Represents anyone interacting with the system: a Customer (user), a Waiter/Chef (employee), or the Owner (admin).
-    
-    INTERVIEW NOTE: We use AbstractUser instead of a Profile model because it's cleaner for 
-    Role-Based Access Control (RBAC) and integrates natively with Django's auth system.
     """
-    
-    # ROLE_CHOICES defines the fixed options for user types.
-    # Like a dropdown menu in a real-world registration form.
     ROLE_CHOICES = [
         ('user', 'User'),         # Regular customer who orders food
         ('employee', 'Employee'), # Staff member who manages orders
         ('admin', 'Admin'),       # Manager who controls everything
     ]
     
-    # Stores the user's role. Defaults to 'user' (Customer).
     role = models.CharField(
         max_length=20, 
         choices=ROLE_CHOICES, 
@@ -41,9 +34,29 @@ class User(AbstractUser):
         help_text="Determines what the user can see and do in the app."
     )
     
-    # Optional phone number field for order contact.
     phone = models.CharField(max_length=15, blank=True, null=True)
 
     def __str__(self):
-        """Returns a readable name for the user in the Django Admin panel."""
         return f"{self.username} ({self.role})"
+
+# ==========================================
+# OTP MODEL - ✅ SECURE STORAGE & EXPIRY
+# ==========================================
+class OTP(models.Model):
+    phone = models.CharField(max_length=15, unique=True)
+    otp_hash = models.CharField(max_length=64) # Hashed OTP
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_verified = models.BooleanField(default=False)
+    attempts = models.IntegerField(default=0)
+    last_sent_at = models.DateTimeField(auto_now=True)
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    def __str__(self):
+        return f"OTP for {self.phone} - Verified: {self.is_verified}"
+
+    class Meta:
+        verbose_name = "OTP Verification"
+        verbose_name_plural = "OTP Verifications"
