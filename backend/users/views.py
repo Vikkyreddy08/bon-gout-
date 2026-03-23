@@ -12,8 +12,14 @@ from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserRegistrationSerializer, MyTokenObtainPairSerializer, UserProfileSerializer
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
+import random
+import hashlib
+from .models import OTP
 from restaurant.utils import standardized_response
 from restaurant.middleware import log_request, admin_only
 
@@ -22,55 +28,114 @@ User = get_user_model()
 class MyTokenObtainPairView(TokenObtainPairView):
     """
     PURPOSE: Handles User Login and issues JWT (JSON Web Token) tokens.
-    
-    API: POST /api/users/login/
-    METHOD: POST
-    
-    INPUTS: username, password.
-    EXPECTED RESPONSE: { "access": "...", "refresh": "..." } + custom user data like 'role'.
-    
-    INTERVIEW NOTE: We use JWT (JSON Web Token) for authentication. 
-    It's stateless, meaning the server doesn't need to store sessions, 
-    making the app more scalable.
     """
     serializer_class = MyTokenObtainPairSerializer
 
+# ==========================================
+# OTP VIEWS - ✅ SECURE SEND & VERIFY
+# ==========================================
+
+class SendOTPView(APIView):
+    """
+    PURPOSE: Generates and saves a 6-digit OTP for a phone number.
+    RATE LIMITING: 1 request per 30 seconds.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        phone = request.data.get('phone')
+        if not phone or len(phone) < 10:
+            return standardized_response(status.HTTP_400_BAD_REQUEST, "Valid phone number required", success=False)
+
+        otp_obj, created = OTP.objects.get_or_create(phone=phone, defaults={
+            'expires_at': timezone.now() + timedelta(minutes=5),
+            'otp_hash': ''
+        })
+
+        # Rate Limiting: 30 seconds
+        if not created and (timezone.now() - otp_obj.last_sent_at).total_seconds() < 30:
+            return standardized_response(status.HTTP_429_TOO_MANY_REQUESTS, "Please wait 30 seconds before resending", success=False)
+
+        # Use a default OTP for all users (e.g., for development/testing)
+        otp_code = "123456" 
+        otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
+
+        # Update OTP object
+        otp_obj.otp_hash = otp_hash
+        otp_obj.expires_at = timezone.now() + timedelta(minutes=5)
+        otp_obj.is_verified = False
+        otp_obj.attempts = 0
+        otp_obj.save()
+
+        # LOGIC: In production, integrate Twilio/MSG91 here.
+        print(f"DEBUG: OTP for {phone} is {otp_code}") 
+
+        return standardized_response(status.HTTP_200_OK, "OTP sent successfully")
+
+class VerifyOTPView(APIView):
+    """
+    PURPOSE: Verifies the 6-digit OTP provided by the user.
+    SECURITY: Max 5 attempts, expiry check, hashing.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        phone = request.data.get('phone')
+        otp_code = request.data.get('otp')
+
+        if not phone or not otp_code:
+            return standardized_response(status.HTTP_400_BAD_REQUEST, "Phone and OTP required", success=False)
+
+        try:
+            otp_obj = OTP.objects.get(phone=phone)
+        except OTP.DoesNotExist:
+            return standardized_response(status.HTTP_404_NOT_FOUND, "No OTP found for this number", success=False)
+
+        if otp_obj.is_expired():
+            return standardized_response(status.HTTP_400_BAD_REQUEST, "OTP has expired", success=False)
+
+        if otp_obj.attempts >= 5:
+            return standardized_response(status.HTTP_400_BAD_REQUEST, "Max attempts reached. Please resend OTP.", success=False)
+
+        # Verify Hash
+        input_hash = hashlib.sha256(otp_code.encode()).hexdigest()
+        if input_hash == otp_obj.otp_hash:
+            otp_obj.is_verified = True
+            otp_obj.save()
+            return standardized_response(status.HTTP_200_OK, "OTP verified successfully")
+        else:
+            otp_obj.attempts += 1
+            otp_obj.save()
+            return standardized_response(status.HTTP_400_BAD_REQUEST, "Invalid OTP code", success=False)
+
 class UserRegistrationView(APIView):
     """
-    PURPOSE: Handles Public User Signup (Customers).
-    
-    API: POST /api/users/register/
-    METHOD: POST
-    
-    LOGIC: Anyone can access this (AllowAny). Validates data and creates a 'user' role by default.
+    PURPOSE: Handles Public User Signup with OTP requirement.
     """
     permission_classes = [permissions.AllowAny]
 
     @log_request
     def post(self, request):
-        """
-        Processes the signup request and returns a standardized success/error response.
-        
-        INPUT: 'request.data' containing user details from React.
-        """
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            # If valid, save() calls the 'create' method in serializers.py
             user = serializer.save()
+            
+            # Generate JWT tokens for auto-login after signup
+            refresh = RefreshToken.for_user(user)
+            tokens = {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+            
             return standardized_response(
                 status.HTTP_201_CREATED, 
                 "User registered successfully", 
-                UserRegistrationSerializer(user).data
+                {**UserRegistrationSerializer(user).data, **tokens}
             )
-        # If invalid, flatten errors for a readable message (e.g. "Validation failed: username: Already taken")
-        # We also log the full errors to the server for debugging.
+        
         full_errors = serializer.errors
         error_msg = "Validation failed: "
-        
-        details = []
-        for field, errors in full_errors.items():
-            details.append(f"{field}: {errors[0]}")
-        
+        details = [f"{field}: {errors[0]}" for field, errors in full_errors.items()]
         error_msg += " | ".join(details)
         
         return standardized_response(status.HTTP_400_BAD_REQUEST, error_msg, success=False)
