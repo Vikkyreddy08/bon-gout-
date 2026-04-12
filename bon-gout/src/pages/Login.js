@@ -164,9 +164,6 @@ export default function Login() {
                     <label htmlFor="access_code" className="block text-sm font-bold text-orange-500 transition-colors">
                       {formData.role === 'admin' ? 'Admin Access Code' : 'Employee Secret Key'}
                     </label>
-                    <span className="text-[10px] text-orange-500 font-bold bg-orange-500/10 px-2 py-0.5 rounded-full">
-                      Code: {formData.role === 'admin' ? 'ADMIN123' : 'EMP123'}
-                    </span>
                   </div>
                   <div className="relative">
                     <input
