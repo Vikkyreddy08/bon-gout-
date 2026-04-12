@@ -158,14 +158,14 @@ export default function Login() {
                 </div>
               </div>
 
-              {(formData.role === 'admin' || formData.role === 'employee') && (
+              {formData.role === 'employee' && (
                 <div className="animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="flex justify-between items-center mb-2">
                     <label htmlFor="access_code" className="block text-sm font-bold text-orange-500 transition-colors">
-                      {formData.role === 'admin' ? 'Admin Access Code' : 'Employee Secret Key'}
+                      Employee Secret Key
                     </label>
                     <span className="text-[10px] text-orange-500 font-bold bg-orange-500/10 px-2 py-0.5 rounded-full">
-                      Code: {formData.role === 'admin' ? 'ADMIN123' : 'EMP123'}
+                      Code: EMP123
                     </span>
                   </div>
                   <div className="relative">
@@ -177,7 +177,7 @@ export default function Login() {
                       onChange={handleChange}
                       required
                       className="w-full p-4 pr-12 rounded-2xl bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/30 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors placeholder:text-gray-400"
-                      placeholder={`Enter ${formData.role} code`}
+                      placeholder="Enter employee code"
                     />
                     <button
                       type="button"
