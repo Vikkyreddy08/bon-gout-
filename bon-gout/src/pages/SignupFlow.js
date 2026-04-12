@@ -325,18 +325,18 @@ const SignupFlow = () => {
               />
             </div>
 
-            {/* SECRET CODE (Show only for Employee) */}
-            {role === 'employee' && (
+            {/* SECRET CODE (Show only for Admin/Employee) */}
+            {(role === 'admin' || role === 'employee') && (
               <div className="relative animate-fade-in-up">
                 <div className="text-center">
                   <p className="text-[10px] text-orange-500 font-bold mb-2 bg-orange-500/10 py-1 rounded-lg">
-                    Default Employee Code: EMP123
+                    Default {role === 'admin' ? 'Admin' : 'Employee'} Code: {role === 'admin' ? 'ADMIN123' : 'EMP123'}
                   </p>
                 </div>
                 <FaLock className="absolute left-4 bottom-[1.1rem] text-orange-500" />
                 <input
                   type="password"
-                  placeholder="Employee Secret Key"
+                  placeholder={role === 'admin' ? "Admin Access Code" : "Employee Secret Key"}
                   className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-orange-500/30 bg-orange-500/5 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                   value={accessCode}
                   onChange={(e) => setAccessCode(e.target.value)}

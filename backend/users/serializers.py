@@ -47,9 +47,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             except OTP.DoesNotExist:
                 raise serializers.ValidationError({"otp": "No OTP verification found for this phone number."})
 
-        # 2. ROLE-BASED ACCESS CODE VERIFICATION (Only for employees now)
+        # 2. ROLE-BASED ACCESS CODE VERIFICATION
         access_code = data.get('access_code', '')
-        if role == 'employee':
+        if role == 'admin':
+            admin_code = os.getenv('ADMIN_SECRET_CODE', 'ADMIN123')
+            if access_code != admin_code:
+                raise serializers.ValidationError({"access_code": "Invalid access code for Admin role."})
+        elif role == 'employee':
             employee_code = os.getenv('EMPLOYEE_SECRET_CODE', 'EMP123')
             if access_code != employee_code:
                 raise serializers.ValidationError({"access_code": "Invalid access code for Employee role."})
