@@ -160,9 +160,14 @@ export default function Login() {
 
               {(formData.role === 'admin' || formData.role === 'employee') && (
                 <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                  <label htmlFor="access_code" className="block text-sm font-bold text-orange-500 mb-2 transition-colors">
-                    {formData.role === 'admin' ? 'Admin Access Code' : 'Employee Secret Key'}
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label htmlFor="access_code" className="block text-sm font-bold text-orange-500 transition-colors">
+                      {formData.role === 'admin' ? 'Admin Access Code' : 'Employee Secret Key'}
+                    </label>
+                    <span className="text-[10px] text-orange-500 font-bold bg-orange-500/10 px-2 py-0.5 rounded-full">
+                      Code: {formData.role === 'admin' ? 'ADMIN123' : 'EMP123'}
+                    </span>
+                  </div>
                   <div className="relative">
                     <input
                       id="access_code"
