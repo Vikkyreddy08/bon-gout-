@@ -15,10 +15,14 @@ env/
 # Django
 db.sqlite3
 media/
+staticfiles/
+backend/staticfiles/
 
 # Node
 node_modules/
 build/
+bon-gout/build/
+.eslintcache
 
 # Logs
 *.log
