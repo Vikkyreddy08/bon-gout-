@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -20,8 +20,9 @@ import { getImageUrl, DEFAULT_FOOD_IMAGE } from '../utils/imageUtils';
 
 export default function Home() {
   // HOOKS:
+  const navigate = useNavigate();
   const { addToCart, cartCount } = useCart();
-  const { isUser } = useAuth(); // Check if the logged-in person is a customer.
+  const { isLoggedIn, isUser, isAdmin, isEmployee } = useAuth(); // Extract auth states
   
   // STATE:
   const [menuItems, setMenuItems] = useState([]); // Stores the list of featured dishes.
