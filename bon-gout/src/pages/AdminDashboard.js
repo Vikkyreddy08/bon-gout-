@@ -11,10 +11,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { isAdmin, loading: authLoading } = useAuth();
   
   // STATE:
   const [orders, setOrders] = useState([]); // List of all customer orders.
@@ -39,8 +41,13 @@ export default function AdminDashboard() {
    * protection on the backend for true security.
    */
   useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      toast.error("Unauthorized access! 🛑");
+      navigate('/');
+      return;
+    }
     fetchAdminData();
-  }, []);
+  }, [isAdmin, authLoading, navigate]);
 
   /**
    * PURPOSE: Fetches all data needed for the dashboard.

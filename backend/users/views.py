@@ -68,7 +68,7 @@ class SendOTPView(APIView):
         otp_obj.save()
 
         # LOGIC: In production, integrate Twilio/MSG91 here.
-        print(f"DEBUG: OTP for {phone} is {otp_code}") 
+        # print(f"DEBUG: OTP for {phone} is {otp_code}") 
 
         return standardized_response(status.HTTP_200_OK, "OTP sent successfully")
 

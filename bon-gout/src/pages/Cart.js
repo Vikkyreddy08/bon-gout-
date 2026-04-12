@@ -96,7 +96,7 @@ export default function Cart() {
   const handleRazorpayPayment = async (djangoOrder) => {
     try {
       setLoading(true);
-      console.log('Initiating Razorpay for order:', djangoOrder.order_number);
+      // API: POST /api/restaurant/payments/create-razorpay-order/
 
       const res = await loadRazorpay();
       if (!res) {

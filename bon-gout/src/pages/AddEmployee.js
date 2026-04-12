@@ -8,12 +8,17 @@
  * - Automatically forces the role to 'employee' on the backend.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 export default function AddEmployee() {
+  const navigate = useNavigate();
+  const { isAdmin, loading: authLoading } = useAuth();
+
   // STATE: Stores form inputs for the new employee.
   const [formData, setFormData] = useState({ 
     username: '', 
@@ -24,6 +29,16 @@ export default function AddEmployee() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  /**
+   * PURPOSE: Security check on load.
+   */
+  useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      toast.error("Unauthorized access! 🛑");
+      navigate('/');
+    }
+  }, [isAdmin, authLoading, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
