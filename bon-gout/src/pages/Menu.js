@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -113,7 +113,7 @@ const ReviewModal = ({ isOpen, onClose, dish, onSubmit }) => {
  * unless its specific 'item' data changes. This improves performance when 
  * filtering a long menu list.
  */
-const MenuCard = React.memo(({ item, onAddToCart, onReviewClick, canReview, isUser }) => {
+const MenuCard = React.memo(({ item, onAddToCart, onReviewClick, canReview, isUser, isLoggedIn }) => {
   const [showReviews, setShowReviews] = useState(false);
 
   return (
@@ -179,7 +179,7 @@ const MenuCard = React.memo(({ item, onAddToCart, onReviewClick, canReview, isUs
           <span className="text-xl md:text-2xl font-black text-gray-900 dark:text-white">₹{item.price}</span>
           <span className="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-tighter">⏱️ {item.prep_time || '20min'}</span>
         </div>
-        {isUser && (
+        {(!isLoggedIn || isUser) && (
           <button 
             onClick={() => onAddToCart(item)} 
             className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold text-sm md:text-base text-black shadow-lg hover:shadow-orange-500/50 hover:scale-105 transition-all duration-300"
@@ -195,7 +195,8 @@ const MenuCard = React.memo(({ item, onAddToCart, onReviewClick, canReview, isUs
 export default function Menu() {
   // CONTEXT HOOKS:
   const { addToCart } = useCart();
-  const { isLoggedIn, user, isUser } = useAuth();
+  const { isLoggedIn, user, isUser, isAdmin, isEmployee } = useAuth();
+  const navigate = useNavigate();
   
   // PAGE STATE:
   const [items, setItems] = useState([]); // All dishes from API
@@ -287,15 +288,22 @@ export default function Menu() {
 
   /**
    * PURPOSE: Handles the "Add to Cart" button.
-   * ROLE RESTRICTION: Only logged-in customers can order.
+   * ROLE RESTRICTION: Only 'Customers' and 'Guests' can add items.
    */
   const handleAddToCart = useCallback((item) => {
-    if (!isUser) {
-      toast.error("Please login as a customer to order food!");
+    if (!isLoggedIn) {
+      toast.error("Please login to add items to your cart! 🔐");
+      navigate('/login');
       return;
     }
+
+    if (isAdmin || isEmployee) {
+      toast.error("Staff accounts cannot place orders! 🧑‍🍳");
+      return;
+    }
+
     addToCart(item);
-  }, [isUser, addToCart]);
+  }, [isLoggedIn, isAdmin, isEmployee, addToCart, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white pt-24 pb-12 transition-colors duration-300">
@@ -370,6 +378,7 @@ export default function Menu() {
                 onAddToCart={handleAddToCart}
                 onReviewClick={(dish) => setReviewModal({ isOpen: true, dish })}
                 isUser={isUser}
+                isLoggedIn={isLoggedIn}
                 canReview={isUser}
               />
             ))}

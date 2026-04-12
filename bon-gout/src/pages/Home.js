@@ -57,16 +57,22 @@ export default function Home() {
   
   /**
    * PURPOSE: Adds a dish to the shopping cart.
-   * ROLE RESTRICTION: Only 'Customers' can add items. 
+   * ROLE RESTRICTION: Only 'Customers' and 'Guests' can see/click this. 
    * Staff/Admins are blocked to prevent accidental orders while managing the site.
    */
   const handleQuickAdd = (item) => {
-    if (!isUser) {
-      toast.error("Only customers can place orders! 🍽️");
+    if (!isLoggedIn) {
+      toast.error("Please login to add items to your cart! 🔐");
+      navigate('/login');
       return;
     }
+    
+    if (isAdmin || isEmployee) {
+      toast.error("Staff accounts cannot place orders! 🧑‍🍳");
+      return;
+    }
+
     addToCart(item);
-    // Success notification appears at the top of the screen.
   };
 
   return (
@@ -130,8 +136,8 @@ export default function Home() {
                     <span className="font-semibold text-orange-600 dark:text-orange-400">₹{item.price}</span>
                   </div>
                   
-                  {/* QUICK ACTION BUTTON: Only visible to Customers. */}
-                  {isUser && (
+                  {/* QUICK ACTION BUTTON: Visible to Customers and Guests. Hidden for Admin/Employee. */}
+                  {(!isLoggedIn || isUser) && (
                     <button
                       onClick={() => handleQuickAdd(item)}
                       className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-black py-3 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg"

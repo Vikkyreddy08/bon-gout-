@@ -293,7 +293,16 @@ export default function Cart() {
   const handleSubmitOrder = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (cartItems.length === 0) return toast.error("Cart is empty!");
-    if (!isLoggedIn) return navigate('/login');
+    
+    if (!isLoggedIn) {
+      toast.error("Please login to complete your order! 🔐");
+      return navigate('/login');
+    }
+
+    if (user?.role === 'admin' || user?.role === 'employee') {
+      return toast.error("Staff members cannot place orders! 🧑‍🍳");
+    }
+
     submitOrder();
   };
 
@@ -398,12 +407,30 @@ export default function Cart() {
         <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 bg-clip-text text-transparent mb-6">
           🛒 Shopping Cart
         </h1>
-        <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto">
-          Review your order before checkout ({cartCount} items)
+        <p className="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+          Review your items and complete your order
         </p>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 grid grid-cols-1 xl:grid-cols-2 gap-12">
+        {/* LOGIN PROMPT FOR GUESTS */}
+        {!isLoggedIn && (
+          <div className="xl:col-span-2 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="bg-orange-500/10 backdrop-blur-xl border-2 border-orange-500/30 rounded-[2rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl shadow-orange-500/5">
+              <div className="text-center md:text-left space-y-2">
+                <h3 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">Ready to checkout? 🥘</h3>
+                <p className="text-gray-600 dark:text-gray-400 font-medium">Please login to your account to place this order and track its progress.</p>
+              </div>
+              <Link 
+                to="/login" 
+                className="whitespace-nowrap bg-orange-500 hover:bg-orange-600 text-black px-10 py-4 rounded-2xl font-black text-lg shadow-lg hover:shadow-orange-500/40 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-3"
+              >
+                🔐 Login to Order
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Delivery Details Form */}
         <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
           <h2 className="text-2xl font-black text-orange-400 mb-6 flex items-center gap-2">
